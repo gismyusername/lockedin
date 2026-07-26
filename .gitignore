@@ -1,0 +1,6 @@
+.build/
+.DS_Store
+dist/
+Secrets.plist
+.supabase-db-password
+supabase/.temp/

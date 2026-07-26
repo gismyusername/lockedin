@@ -1,0 +1,45 @@
+name: Release
+
+on:
+  push:
+    tags: ["v*"]
+
+jobs:
+  build:
+    runs-on: macos-15
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Build universal binary
+        run: swift build -c release --arch arm64 --arch x86_64
+        env:
+          CODE_SIGNING_ALLOWED: "NO"
+
+      - name: Bundle .app
+        run: |
+          APP=dist/LockedIn.app
+          mkdir -p "$APP/Contents/MacOS" "$APP/Contents/Resources"
+          cp .build/apple/Products/Release/LockedIn "$APP/Contents/MacOS/LockedIn"
+          cp Resources/Info.plist "$APP/Contents/Info.plist"
+          # Bake in backend credentials when provided as repo secrets, so
+          # friends' downloads are pre-wired to the shared Supabase project.
+          if [ -n "${{ secrets.SUPABASE_URL }}" ]; then
+            cat > "$APP/Contents/Resources/Secrets.plist" <<EOF
+          <?xml version="1.0" encoding="UTF-8"?>
+          <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+          <plist version="1.0">
+          <dict>
+            <key>SUPABASE_URL</key><string>${{ secrets.SUPABASE_URL }}</string>
+            <key>SUPABASE_ANON_KEY</key><string>${{ secrets.SUPABASE_ANON_KEY }}</string>
+          </dict>
+          </plist>
+          EOF
+          fi
+          codesign --force --deep -s - "$APP"
+          ditto -c -k --keepParent "$APP" dist/LockedIn.zip
+
+      - name: Create release
+        uses: softprops/action-gh-release@v2
+        with:
+          files: dist/LockedIn.zip
+          generate_release_notes: true
