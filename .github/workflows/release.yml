@@ -4,6 +4,10 @@ on:
   push:
     tags: ["v*"]
 
+# The default GITHUB_TOKEN is read-only, which blocks creating the Release.
+permissions:
+  contents: write
+
 jobs:
   build:
     runs-on: macos-15
