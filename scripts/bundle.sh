@@ -38,6 +38,7 @@ rm -rf "$APP"
 mkdir -p "$APP/Contents/MacOS" "$APP/Contents/Resources"
 cp "$BIN" "$APP/Contents/MacOS/LockedIn"
 cp Resources/Info.plist "$APP/Contents/Info.plist"
+cp Resources/AppIcon.icns "$APP/Contents/Resources/AppIcon.icns"
 # Bake in backend credentials for local builds when Secrets.plist exists.
 [ -f Secrets.plist ] && cp Secrets.plist "$APP/Contents/Resources/Secrets.plist"
 # Ad-hoc sign so the app runs locally without a developer certificate.

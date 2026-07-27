@@ -21,6 +21,11 @@ mkdir -p dist
 
 cp -R "$APP" "$STAGE/LockedIn.app"
 ln -s /Applications "$STAGE/Applications"
+# Volume icon, so the mounted disk shows the bolt too. Needs the "has custom
+# icon" flag, which SetFile sets when Xcode is installed; skipped otherwise.
+if [ -f Resources/AppIcon.icns ]; then
+  cp Resources/AppIcon.icns "$STAGE/.VolumeIcon.icns"
+fi
 mkdir -p "$STAGE/.background"
 cp Resources/dmg-background.png "$STAGE/.background/background.png"
 # Prebaked window layout (icon positions, background, view mode). CI has no
@@ -65,6 +70,10 @@ tell application "Finder"
   end tell
 end tell
 APPLESCRIPT
+fi
+
+if [ -f "$MOUNT/.VolumeIcon.icns" ] && command -v SetFile >/dev/null 2>&1; then
+  SetFile -a C "$MOUNT" || true
 fi
 
 sync
