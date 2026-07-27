@@ -40,6 +40,33 @@ _ = s.addToToday(seconds: 1799, key: key(daysAgo: 2))   // one second short -> g
 _ = s.addToToday(seconds: 5000, key: key(daysAgo: 3))
 check("streak stops at sub-30min day", "\(s.streakDays())", "2")
 
+
+// ---- MonthGrid layout ----
+func gridFor(_ y: Int, _ m: Int, firstWeekday: Int) -> MonthGrid {
+    var c = Calendar(identifier: .gregorian)
+    c.timeZone = TimeZone(identifier: "Asia/Bangkok")!
+    c.firstWeekday = firstWeekday
+    let anchor = c.date(from: DateComponents(year: y, month: m, day: 15))!
+    return MonthGrid.make(anchor: anchor, calendar: c)
+}
+// July 2026 starts on a Wednesday.
+let julSun = gridFor(2026, 7, firstWeekday: 1)   // Sunday-first (US)
+let julMon = gridFor(2026, 7, firstWeekday: 2)   // Monday-first (FR)
+check("July 2026 days", "\(julSun.dayCount)", "31")
+check("July 2026 blanks, Sunday-first", "\(julSun.leadingBlanks)", "3")
+check("July 2026 blanks, Monday-first", "\(julMon.leadingBlanks)", "2")
+// Feb 2028 is a leap February starting on a Tuesday.
+let feb28 = gridFor(2028, 2, firstWeekday: 2)
+check("Feb 2028 leap day count", "\(feb28.dayCount)", "29")
+check("Feb 2028 blanks, Monday-first", "\(feb28.leadingBlanks)", "1")
+check("Feb 2026 non-leap", "\(gridFor(2026, 2, firstWeekday: 2).dayCount)", "28")
+// Weekday symbols must rotate with the week start.
+let symsSun = MonthGrid.weekdaySymbols(firstWeekday: 1, locale: Locale(identifier: "en_US"))
+let symsMon = MonthGrid.weekdaySymbols(firstWeekday: 2, locale: Locale(identifier: "en_US"))
+check("Sunday-first symbols start", symsSun.first ?? "", "S")
+check("Monday-first symbols start", symsMon.first ?? "", "M")
+check("symbol count", "\(symsMon.count)", "7")
+
 UserDefaults.standard.removeObject(forKey: "dailyTotals")
 print(fail == 0 ? "\nALL \(pass) CHECKS PASSED" : "\n\(fail) FAILED, \(pass) passed")
 exit(fail == 0 ? 0 : 1)

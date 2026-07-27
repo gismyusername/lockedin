@@ -21,6 +21,9 @@ struct LocalStore {
         return f.string(from: date)
     }
 
+    /// Every day recorded on this Mac, keyed by local `yyyy-MM-dd`.
+    func totalsByDay() -> [String: Int] { totals() }
+
     private func totals() -> [String: Int] {
         defaults.dictionary(forKey: totalsKey) as? [String: Int] ?? [:]
     }

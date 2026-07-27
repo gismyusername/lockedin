@@ -3,11 +3,14 @@ import SwiftUI
 struct PanelView: View {
     @EnvironmentObject var state: AppState
     @State private var showSettings = false
+    @State private var showHistory = false
 
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
             if showSettings {
                 SettingsView(showSettings: $showSettings)
+            } else if showHistory {
+                HistoryView(showHistory: $showHistory)
             } else if state.displayName.isEmpty {
                 NamePromptView()
             } else {
@@ -39,7 +42,7 @@ struct PanelView: View {
                     .font(.caption)
                     .foregroundStyle(.secondary)
             }
-            FooterView(showSettings: $showSettings)
+            FooterView(showSettings: $showSettings, showHistory: $showHistory)
         }
     }
 }
@@ -265,6 +268,7 @@ struct SettingsView: View {
 struct FooterView: View {
     @EnvironmentObject var state: AppState
     @Binding var showSettings: Bool
+    @Binding var showHistory: Bool
 
     var body: some View {
         HStack {
@@ -278,6 +282,11 @@ struct FooterView: View {
                     .foregroundStyle(.yellow)
                     .help(state.syncError ?? "")
             }
+            Button { showHistory = true } label: {
+                Image(systemName: "calendar").foregroundStyle(.secondary)
+            }
+            .buttonStyle(.plain)
+            .help("Previous days")
             Button { showSettings = true } label: {
                 Image(systemName: "gearshape").foregroundStyle(.secondary)
             }.buttonStyle(.plain)
