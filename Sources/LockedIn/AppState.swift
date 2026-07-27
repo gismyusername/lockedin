@@ -19,6 +19,7 @@ final class AppState: ObservableObject {
     private var tick = 0
     private var timer: Timer?
     private var userRegistered = false
+    private var lastAutoJoin: Date?
 
     /// Idle threshold: last input under 60s ago counts as locked in.
     private let idleThreshold: Double = 60
@@ -106,6 +107,7 @@ final class AppState: ObservableObject {
     private func sendHeartbeat() async {
         guard let client, !displayName.isEmpty else { return }
         await ensureUserRegistered()
+        await autoJoinIfNeeded()
         do {
             try await client.heartbeat(userId: userId, dateKey: LocalStore.dateKey(),
                                        seconds: todaySeconds, isActive: isLockedIn,
@@ -138,6 +140,27 @@ final class AppState: ObservableObject {
             try await client.upsertUser(id: userId, displayName: displayName)
             userRegistered = true
             syncError = nil
+            await autoJoinIfNeeded()
+        } catch {
+            syncError = error.localizedDescription
+        }
+    }
+
+    /// Fresh installs land straight on the leaderboard: no invite code to type,
+    /// no button to press. Skipped if the user deliberately left the group,
+    /// otherwise "Leave group" would undo itself a minute later.
+    private func autoJoinIfNeeded() async {
+        guard let client, let code = Config.defaultGroupCode(),
+              groupId == nil, !displayName.isEmpty,
+              !UserDefaults.standard.bool(forKey: "leftDefaultGroup") else { return }
+        // Retry on a slow cadence so a failed lookup doesn't hammer the API.
+        if let last = lastAutoJoin, Date().timeIntervalSince(last) < 120 { return }
+        lastAutoJoin = Date()
+        do {
+            let id = try await client.findGroup(code: code)
+            try await client.joinGroup(groupId: id, userId: userId)
+            setGroup(id: id, code: code)
+            await refreshBoard()
         } catch {
             syncError = error.localizedDescription
         }
@@ -175,6 +198,7 @@ final class AppState: ObservableObject {
     }
 
     private func setGroup(id: UUID, code: String) {
+        UserDefaults.standard.set(false, forKey: "leftDefaultGroup")
         groupId = id
         groupCode = code
         UserDefaults.standard.set(id.uuidString, forKey: "groupId")
@@ -183,6 +207,7 @@ final class AppState: ObservableObject {
     }
 
     func leaveGroup() {
+        UserDefaults.standard.set(true, forKey: "leftDefaultGroup")
         groupId = nil
         groupCode = nil
         board = []

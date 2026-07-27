@@ -43,6 +43,7 @@ jobs:
           <dict>
             <key>SUPABASE_URL</key><string>${{ secrets.SUPABASE_URL }}</string>
             <key>SUPABASE_ANON_KEY</key><string>${{ secrets.SUPABASE_ANON_KEY }}</string>
+            <key>DEFAULT_GROUP_CODE</key><string>${{ secrets.DEFAULT_GROUP_CODE }}</string>
           </dict>
           </plist>
           EOF

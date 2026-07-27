@@ -213,7 +213,9 @@ struct NamePromptView: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 10) {
             Text("Locked In").font(.title3.bold())
-            Text("Your timer is already running. What should friends call you?")
+            Text(Config.defaultGroupCode() != nil
+                 ? "Your timer is already running. Pick a name and you're on the board — no code needed."
+                 : "Your timer is already running. What should friends call you?")
                 .font(.caption).foregroundStyle(.secondary)
             HStack {
                 TextField("Display name", text: $name)
