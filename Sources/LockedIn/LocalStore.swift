@@ -12,12 +12,14 @@ struct LocalStore {
     /// yields "2569-07-27", Japanese gives "0008-07-27", Arabic gives
     /// Arabic-Indic digits. Any of those would orphan the stored history and
     /// look exactly like the day counter failing to roll over.
-    static func dateKey(_ date: Date = Date()) -> String {
+    /// `timeZone` exists so callers doing calendar math can format with the
+    /// same zone they computed in. Mixing zones here shifts keys by a day.
+    static func dateKey(_ date: Date = Date(), timeZone: TimeZone = .current) -> String {
         let f = DateFormatter()
         f.locale = Locale(identifier: "en_US_POSIX")
         f.calendar = Calendar(identifier: .gregorian)
         f.dateFormat = "yyyy-MM-dd"
-        f.timeZone = .current
+        f.timeZone = timeZone
         return f.string(from: date)
     }
 

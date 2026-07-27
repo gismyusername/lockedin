@@ -21,10 +21,11 @@ enum BoardRange: String, CaseIterable, Identifiable {
     /// Week and month run to today rather than covering the whole period —
     /// nobody has tomorrow's minutes yet.
     func bounds(now: Date = Date(), calendar: Calendar = .lockedIn) -> (from: String, to: String) {
-        let to = LocalStore.dateKey(now)
+        let zone = calendar.timeZone
+        let to = LocalStore.dateKey(now, timeZone: zone)
         func start(_ unit: Calendar.Component) -> String {
             guard let interval = calendar.dateInterval(of: unit, for: now) else { return to }
-            return LocalStore.dateKey(interval.start)
+            return LocalStore.dateKey(interval.start, timeZone: zone)
         }
         switch self {
         case .today: return (to, to)
