@@ -33,7 +33,8 @@ work. If your hands are moving, you're grinding.
 3. Launch it and pick a display name. If the build was made with a default
    group configured, you're on the leaderboard immediately — no code to type.
    Otherwise, **Create a group** or **Join** with a friend's invite code.
-4. In settings (gear icon), enable **Launch at login**. Done — never touch it again.
+4. Nothing else. It registers itself to start at login on first run, and there
+   is no settings screen because there is nothing to configure.
 
 ## Build from source
 
@@ -47,8 +48,7 @@ git clone <this repo> && cd lockedin
 
 1. Create a free project at [supabase.com](https://supabase.com).
 2. Paste `supabase/schema.sql` into the SQL editor and run it.
-3. Put the project URL and anon key into the app's settings (gear icon), or
-   into repo secrets `SUPABASE_URL` / `SUPABASE_ANON_KEY` so releases ship
+3. Put the project URL and anon key into repo secrets `SUPABASE_URL` / `SUPABASE_ANON_KEY` so releases ship
    pre-wired.
 4. Optional: set repo secret `DEFAULT_GROUP_CODE` to your group's invite code.
    Every fresh install then joins that group by itself, so friends only type a

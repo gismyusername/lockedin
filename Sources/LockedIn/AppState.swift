@@ -52,9 +52,8 @@ final class AppState: ObservableObject {
         if let stored = defaults.string(forKey: "groupId") { groupId = UUID(uuidString: stored) }
         client = Config.supabase()
         todaySeconds = LocalStore.shared.todaySeconds()
-        if #available(macOS 13.0, *) {
-            launchAtLogin = SMAppService.mainApp.status == .enabled
-        }
+        launchAtLogin = SMAppService.mainApp.status == .enabled
+        enableLaunchAtLoginOnce()
         start()
     }
 
@@ -217,13 +216,18 @@ final class AppState: ObservableObject {
 
     // MARK: - Settings actions
 
-    func saveSupabaseConfig(url: String, key: String) {
-        UserDefaults.standard.set(url.trimmingCharacters(in: .whitespaces), forKey: "supabaseUrl")
-        UserDefaults.standard.set(key.trimmingCharacters(in: .whitespaces), forKey: "supabaseKey")
-        client = Config.supabase()
-        userRegistered = false
-        syncError = client == nil ? "Invalid Supabase URL or key" : nil
-        Task { await ensureUserRegistered() }
+
+    /// The app is meant to be invisible infrastructure, so it registers itself
+    /// at login on first run. Only once: if the user later switches it off in
+    /// System Settings, that decision sticks.
+    private func enableLaunchAtLoginOnce() {
+        let flag = "didRegisterLoginItem"
+        guard !UserDefaults.standard.bool(forKey: flag),
+              Bundle.main.bundleURL.pathExtension == "app",
+              SMAppService.mainApp.status != .enabled else { return }
+        try? SMAppService.mainApp.register()
+        UserDefaults.standard.set(true, forKey: flag)
+        launchAtLogin = SMAppService.mainApp.status == .enabled
     }
 
     func setLaunchAtLogin(_ enabled: Bool) {

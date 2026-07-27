@@ -24,7 +24,7 @@ struct BoardRow: Codable, Identifiable, Equatable {
 /// (see docs/DESIGN.md "Presence rules").
 enum Presence: Equatable {
     case grinding
-    case idle(minutes: Int)
+    case idle(minutes: Int?)
     case lastSeen(Date?)
 
     init(row: BoardRow, now: Date = Date()) {
@@ -32,8 +32,7 @@ enum Presence: Equatable {
         if row.isActive && heartbeatAge < 120 {
             self = .grinding
         } else if heartbeatAge < 600 {
-            let mins = row.lastActiveAt.map { max(0, Int(now.timeIntervalSince($0) / 60)) } ?? 0
-            self = .idle(minutes: mins)
+            self = .idle(minutes: row.lastActiveAt.map { max(0, Int(now.timeIntervalSince($0) / 60)) })
         } else {
             self = .lastSeen(row.heartbeatAt)
         }

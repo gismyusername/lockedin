@@ -2,14 +2,11 @@ import SwiftUI
 
 struct PanelView: View {
     @EnvironmentObject var state: AppState
-    @State private var showSettings = false
     @State private var showHistory = false
 
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
-            if showSettings {
-                SettingsView(showSettings: $showSettings)
-            } else if showHistory {
+            if showHistory {
                 HistoryView(showHistory: $showHistory)
             } else if state.displayName.isEmpty {
                 NamePromptView()
@@ -38,11 +35,11 @@ struct PanelView: View {
                 }
             } else {
                 Divider().padding(.vertical, 10)
-                Text("Solo mode — add a backend in settings to compete with friends.")
+                Text("Solo mode — this build has no backend, so it's just your timer. See the README to point it at one.")
                     .font(.caption)
                     .foregroundStyle(.secondary)
             }
-            FooterView(showSettings: $showSettings, showHistory: $showHistory)
+            FooterView(showHistory: $showHistory)
         }
     }
 }
@@ -79,8 +76,13 @@ struct LiveSection: View {
         VStack(alignment: .leading, spacing: 4) {
             SectionTitle("Live")
             // Grinding friends first — they're the reason to open the panel.
-            ForEach(friends.sorted {
-                (Presence(row: $0) == .grinding ? 0 : 1) < (Presence(row: $1) == .grinding ? 0 : 1)
+            ForEach(friends.sorted { a, b in
+                // Fully ordered: grinding first, then by time, then by name —
+                // otherwise rows reshuffle on every refresh.
+                let ga = Presence(row: a) == .grinding, gb = Presence(row: b) == .grinding
+                if ga != gb { return ga }
+                if a.seconds != b.seconds { return a.seconds > b.seconds }
+                return a.displayName < b.displayName
             }) { row in
                 HStack(spacing: 8) {
                     Avatar(name: row.displayName)
@@ -109,7 +111,8 @@ struct PresenceLabel: View {
                 Text("grinding now").foregroundStyle(Color.green)
             }.font(.caption)
         case .idle(let minutes):
-            Text("idle \(minutes)m").font(.caption).foregroundStyle(.secondary)
+            Text(minutes.map { "idle \($0)m" } ?? "idle")
+                .font(.caption).foregroundStyle(.secondary)
         case .lastSeen(let date):
             Text(TimeFormat.ago(date)).font(.caption).foregroundStyle(.tertiary)
         }
@@ -130,7 +133,7 @@ struct LeaderboardSection: View {
                     Text(index == 0 ? "👑" : "\(index + 1)")
                         .font(.caption).foregroundStyle(.secondary)
                         .frame(width: 18, alignment: .center)
-                    Avatar(name: isMe ? "You" : row.displayName)
+                    Avatar(name: row.displayName)
                     Text(isMe ? "You" : row.displayName).lineLimit(1)
                         .font(.system(size: 13))
                     GeometryReader { geo in
@@ -228,48 +231,8 @@ struct NamePromptView: View {
     }
 }
 
-struct SettingsView: View {
-    @EnvironmentObject var state: AppState
-    @Binding var showSettings: Bool
-    @State private var url = UserDefaults.standard.string(forKey: "supabaseUrl") ?? ""
-    @State private var key = UserDefaults.standard.string(forKey: "supabaseKey") ?? ""
-
-    var body: some View {
-        VStack(alignment: .leading, spacing: 10) {
-            HStack {
-                Text("Settings").font(.headline)
-                Spacer()
-                Button("Done") { showSettings = false }
-            }
-            Toggle("Launch at login", isOn: Binding(
-                get: { state.launchAtLogin },
-                set: { state.setLaunchAtLogin($0) }))
-            if let code = state.groupCode {
-                HStack {
-                    Text("Group code: \(code)").font(.caption)
-                    Spacer()
-                    Button("Leave group") { state.leaveGroup() }
-                        .font(.caption)
-                }
-            }
-            Divider()
-            Text("Backend (Supabase)").font(.caption.bold())
-            TextField("https://xyz.supabase.co", text: $url)
-                .textFieldStyle(.roundedBorder).font(.caption)
-            SecureField("anon key", text: $key)
-                .textFieldStyle(.roundedBorder).font(.caption)
-            Button("Save backend") { state.saveSupabaseConfig(url: url, key: key) }
-            Divider()
-            Button("Quit Locked In") { NSApp.terminate(nil) }
-        }
-    }
-}
-
-// MARK: - Bits
-
 struct FooterView: View {
     @EnvironmentObject var state: AppState
-    @Binding var showSettings: Bool
     @Binding var showHistory: Bool
 
     var body: some View {
@@ -285,13 +248,16 @@ struct FooterView: View {
                     .help(state.syncError ?? "")
             }
             Button { showHistory = true } label: {
-                Image(systemName: "calendar").foregroundStyle(.secondary)
+                Text("History").font(.caption).foregroundStyle(.secondary)
             }
             .buttonStyle(.plain)
-            .help("Previous days")
-            Button { showSettings = true } label: {
-                Image(systemName: "gearshape").foregroundStyle(.secondary)
-            }.buttonStyle(.plain)
+            .help("Your previous days")
+            Button { NSApp.terminate(nil) } label: {
+                Text("Quit").font(.caption).foregroundStyle(.tertiary)
+            }
+            .buttonStyle(.plain)
+            .padding(.leading, 2)
+            .help("Quit Locked In")
         }
         .padding(.top, 10)
         .overlay(Divider(), alignment: .top)
