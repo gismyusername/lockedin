@@ -14,6 +14,9 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
+      - name: Test day-rollover and streak logic
+        run: ./scripts/test.sh
+
       - name: Build universal binary
         run: swift build -c release --arch arm64 --arch x86_64
         env:
