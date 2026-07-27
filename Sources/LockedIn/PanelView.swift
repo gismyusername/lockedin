@@ -27,7 +27,6 @@ struct PanelView: View {
                     if friends.isEmpty {
                         InviteView(compact: true)
                     } else {
-                        LiveSection(friends: friends)
                         LeaderboardSection()
                     }
                 } else {
@@ -68,88 +67,56 @@ struct StatusHeader: View {
     }
 }
 
-struct LiveSection: View {
-    @EnvironmentObject var state: AppState
-    let friends: [BoardRow]
-
-    var body: some View {
-        VStack(alignment: .leading, spacing: 4) {
-            SectionTitle("Live")
-            // Grinding friends first — they're the reason to open the panel.
-            ForEach(friends.sorted { a, b in
-                // Fully ordered: grinding first, then by time, then by name —
-                // otherwise rows reshuffle on every refresh.
-                let ga = Presence(row: a) == .grinding, gb = Presence(row: b) == .grinding
-                if ga != gb { return ga }
-                if a.seconds != b.seconds { return a.seconds > b.seconds }
-                return a.displayName < b.displayName
-            }) { row in
-                HStack(spacing: 8) {
-                    Avatar(name: row.displayName)
-                    Text(row.displayName).lineLimit(1)
-                    Spacer(minLength: 4)
-                    PresenceLabel(presence: Presence(row: row))
-                }
-                .font(.system(size: 13))
-            }
-        }
-        .padding(.top, 10)
-        .overlay(Divider(), alignment: .top)
-        .padding(.top, 10)
-    }
-}
-
-struct PresenceLabel: View {
-    let presence: Presence
-
-    var body: some View {
-        switch presence {
-        case .grinding:
-            HStack(spacing: 5) {
-                Circle().fill(Color.green).frame(width: 8, height: 8)
-                    .shadow(color: .green, radius: 3)
-                Text("grinding now").foregroundStyle(Color.green)
-            }.font(.caption)
-        case .idle(let minutes):
-            Text(minutes.map { "idle \($0)m" } ?? "idle")
-                .font(.caption).foregroundStyle(.secondary)
-        case .lastSeen(let date):
-            Text(TimeFormat.ago(date)).font(.caption).foregroundStyle(.tertiary)
-        }
-    }
-}
-
 struct LeaderboardSection: View {
     @EnvironmentObject var state: AppState
 
     var body: some View {
         let rows = state.board
         let top = max(rows.first?.seconds ?? 0, 1)
+        let grinding = state.grindingFriendCount + (state.isLockedIn ? 1 : 0)
         VStack(alignment: .leading, spacing: 4) {
-            SectionTitle("Today")
+            HStack {
+                SectionTitle("Today")
+                Spacer()
+                if grinding > 0 {
+                    Text("\(grinding) grinding now")
+                        .font(.system(size: 10, weight: .semibold))
+                        .foregroundStyle(Color.green)
+                }
+            }
             ForEach(Array(rows.enumerated()), id: \.element.id) { index, row in
                 let isMe = row.userId == state.userId
+                let presence = isMe
+                    ? (state.isLockedIn ? Presence.grinding : Presence.idle(minutes: nil))
+                    : Presence(row: row)
+                let live = presence == .grinding
+                let gone = { if case .lastSeen = presence { return true } else { return false } }()
                 HStack(spacing: 8) {
-                    Text(index == 0 ? "👑" : "\(index + 1)")
+                    Text(index == 0 ? "\u{1F451}" : "\(index + 1)")
                         .font(.caption).foregroundStyle(.secondary)
                         .frame(width: 18, alignment: .center)
                     Avatar(name: row.displayName)
                     Text(isMe ? "You" : row.displayName).lineLimit(1)
                         .font(.system(size: 13))
+                        .foregroundStyle(gone ? .tertiary : .primary)
+                    if live {
+                        Circle().fill(Color.green).frame(width: 6, height: 6)
+                            .shadow(color: .green, radius: 3)
+                    }
                     GeometryReader { geo in
                         Capsule()
-                            .fill(Color.secondary.opacity(0.35))
+                            .fill(live ? Color.green.opacity(0.75) : Color.secondary.opacity(0.3))
                             .frame(width: max(geo.size.width * CGFloat(row.seconds) / CGFloat(top), 4),
                                    height: 6)
                             .frame(maxHeight: .infinity, alignment: .center)
                     }
                     Text(TimeFormat.long(row.seconds))
                         .font(.system(size: 12, design: .monospaced))
-                        .foregroundStyle(.secondary)
+                        .foregroundStyle(gone ? .tertiary : .secondary)
                 }
                 .padding(.vertical, 3).padding(.horizontal, 4)
                 .background(isMe ? RoundedRectangle(cornerRadius: 6)
-                    .fill(Color.accentColor.opacity(0.12)) : nil)
+                    .fill(Color.white.opacity(0.07)) : nil)
             }
         }
         .padding(.top, 10)
@@ -157,7 +124,6 @@ struct LeaderboardSection: View {
         .padding(.top, 10)
     }
 }
-
 struct InviteView: View {
     @EnvironmentObject var state: AppState
     let compact: Bool
