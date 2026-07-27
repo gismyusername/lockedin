@@ -10,6 +10,10 @@ keyboard, not apps open — and puts you on a live leaderboard with your friends
 - **Private by design**: only your display name, locked-in seconds, and online
   status ever leave your Mac. No app names, no window titles, no screenshots.
 
+> This build ships pointed at one shared backend with an unauthenticated key,
+> which is fine for a group of friends and not fine for anything else. Running
+> your own is a Supabase free project plus `supabase/schema.sql` — see below.
+
 Requires macOS 13 Ventura or later.
 
 ## How the score works
@@ -20,8 +24,8 @@ work. If your hands are moving, you're grinding.
 
 ## Install (friends)
 
-1. Download `LockedIn.zip` from the latest [Release](../../releases), unzip,
-   drag `LockedIn.app` to Applications.
+1. Download **[LockedIn.zip](https://github.com/gismyusername/lockedin/releases/latest/download/LockedIn.zip)**,
+   unzip, drag `LockedIn.app` to Applications.
 2. The app is not notarized (we're cheap). On first launch macOS will block it:
    open **System Settings → Privacy & Security**, scroll down, click
    **Open Anyway**. You only do this once.
