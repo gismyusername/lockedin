@@ -89,6 +89,45 @@ check("ranges end today, not later", BoardRange.year.bounds(now: wed, calendar: 
 let first = cal(2).date(from: DateComponents(year: 2026, month: 8, day: 1, hour: 9))!
 check("month start on the 1st", BoardRange.month.bounds(now: first, calendar: cal(2)).from, "2026-08-01")
 
+
+// ---- Move-to-Applications detection ----
+let dl = "/Users/someone/Downloads"
+func offers(_ path: String) -> String {
+    InstallToApplications.shouldOffer(bundlePath: path, downloadsPath: dl) ? "yes" : "no"
+}
+check("already installed -> no prompt", offers("/Applications/LockedIn.app"), "no")
+check("nested in Applications -> no prompt", offers("/Applications/Utilities/LockedIn.app"), "no")
+check("mounted DMG -> prompt", offers("/Volumes/Locked In/LockedIn.app"), "yes")
+check("downloads folder -> prompt", offers("\(dl)/LockedIn.app"), "yes")
+check("translocated read-only copy -> prompt",
+      offers("/private/var/folders/n2/x/T/AppTranslocation/ABC-123/d/LockedIn.app"), "yes")
+check("dev build dir -> no nagging", offers("/Users/someone/code/lockedin/dist/LockedIn.app"), "no")
+check("path merely containing Downloads -> no prompt",
+      offers("/Users/someone/DownloadsArchive/LockedIn.app"), "no")
+
+
+// ---- install() file operations ----
+let tmp = URL(fileURLWithPath: NSTemporaryDirectory())
+    .appendingPathComponent("li-install-\(UUID().uuidString)")
+let src = tmp.appendingPathComponent("src/LockedIn.app")
+let dst = tmp.appendingPathComponent("dst/LockedIn.app")
+try? FileManager.default.createDirectory(at: src.appendingPathComponent("Contents"),
+                                         withIntermediateDirectories: true)
+try? "binary".write(to: src.appendingPathComponent("Contents/stub"), atomically: true, encoding: .utf8)
+try? FileManager.default.createDirectory(at: dst.deletingLastPathComponent(),
+                                         withIntermediateDirectories: true)
+do {
+    try InstallToApplications.install(source: src, destination: dst)
+    check("copies the bundle", FileManager.default.fileExists(atPath: dst.appendingPathComponent("Contents/stub").path) ? "yes" : "no", "yes")
+    check("leaves the source alone", FileManager.default.fileExists(atPath: src.path) ? "yes" : "no", "yes")
+    // Second run must replace an existing install rather than throwing.
+    try InstallToApplications.install(source: src, destination: dst)
+    check("replaces an existing install", FileManager.default.fileExists(atPath: dst.path) ? "yes" : "no", "yes")
+} catch {
+    check("install threw", "\(error)", "no error")
+}
+try? FileManager.default.removeItem(at: tmp)
+
 UserDefaults.standard.removeObject(forKey: "dailyTotals")
 print(fail == 0 ? "\nALL \(pass) CHECKS PASSED" : "\n\(fail) FAILED, \(pass) passed")
 exit(fail == 0 ? 0 : 1)

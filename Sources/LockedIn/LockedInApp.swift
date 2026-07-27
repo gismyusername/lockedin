@@ -1,8 +1,17 @@
 import SwiftUI
 import AppKit
 
+/// The move prompt needs a running NSApplication, so it waits for launch
+/// rather than firing from the App initialiser.
+final class AppDelegate: NSObject, NSApplicationDelegate {
+    func applicationDidFinishLaunching(_ notification: Notification) {
+        InstallToApplications.promptIfNeeded()
+    }
+}
+
 @main
 struct LockedInApp: App {
+    @NSApplicationDelegateAdaptor(AppDelegate.self) private var delegate
     @StateObject private var state = AppState()
 
     init() {
