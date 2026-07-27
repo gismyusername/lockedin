@@ -51,8 +51,15 @@ jobs:
           codesign --force --deep -s - "$APP"
           ditto -c -k --keepParent "$APP" dist/LockedIn.zip
 
+      - name: Build DMG installer
+        # No Finder on the runner, so the committed .DS_Store supplies the
+        # window layout instead of AppleScript.
+        run: SKIP_FINDER=1 ./scripts/make-dmg.sh dist/LockedIn.app
+
       - name: Create release
         uses: softprops/action-gh-release@v2
         with:
-          files: dist/LockedIn.zip
+          files: |
+            dist/LockedIn.dmg
+            dist/LockedIn.zip
           generate_release_notes: true

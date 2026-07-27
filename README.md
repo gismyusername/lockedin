@@ -25,8 +25,11 @@ work. If your hands are moving, you're grinding.
 
 ## Install (friends)
 
-1. Download **[LockedIn.zip](https://github.com/gismyusername/lockedin/releases/latest/download/LockedIn.zip)**,
-   unzip, drag `LockedIn.app` to Applications.
+1. Download **[LockedIn.dmg](https://github.com/gismyusername/lockedin/releases/latest/download/LockedIn.dmg)**,
+   open it, and drag the app onto the Applications folder in the window.
+   Installing it properly matters: launched straight from Downloads, macOS
+   translocates the app to a random read-only path and registering it to start
+   at login silently fails. (A plain `.zip` is attached to each release too.)
 2. The app is not notarized (we're cheap). On first launch macOS will block it:
    open **System Settings → Privacy & Security**, scroll down, click
    **Open Anyway**. You only do this once.
