@@ -42,7 +42,7 @@ hdiutil create -srcfolder "$STAGE" -volname "$VOL" -fs HFS+ \
 
 MOUNT=$(hdiutil attach "$DMG_RW" -readwrite -noverify -noautoopen | \
         grep -o '/Volumes/.*' | head -1)
-trap 'hdiutil detach "$MOUNT" -quiet 2>/dev/null || true; rm -rf "$STAGE" "$WORK"' EXIT
+trap 'hdiutil detach "$MOUNT" -force -quiet 2>/dev/null || true; rm -rf "$STAGE" "$WORK"' EXIT
 
 # Re-apply styling through Finder when a GUI session exists. Skipped on CI,
 # where the prebaked .DS_Store above already carries the layout.
@@ -77,7 +77,16 @@ if [ -f "$MOUNT/.VolumeIcon.icns" ] && command -v SetFile >/dev/null 2>&1; then
 fi
 
 sync
-hdiutil detach "$MOUNT" -quiet
+# Setting the volume icon makes macOS touch the disk right as we unmount, so
+# a plain detach can fail with "Resource busy" (exit 16). Retry, then force.
+detach() {
+  for _ in 1 2 3; do
+    hdiutil detach "$1" -quiet 2>/dev/null && return 0
+    sleep 2
+  done
+  hdiutil detach "$1" -force -quiet 2>/dev/null
+}
+detach "$MOUNT"
 trap 'rm -rf "$STAGE" "$WORK"' EXIT
 
 rm -f dist/LockedIn.dmg
