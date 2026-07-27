@@ -67,6 +67,28 @@ check("Sunday-first symbols start", symsSun.first ?? "", "S")
 check("Monday-first symbols start", symsMon.first ?? "", "M")
 check("symbol count", "\(symsMon.count)", "7")
 
+
+// ---- BoardRange bounds ----
+func cal(_ firstWeekday: Int) -> Calendar {
+    var c = Calendar(identifier: .gregorian)
+    c.timeZone = TimeZone(identifier: "Asia/Bangkok")!
+    c.firstWeekday = firstWeekday
+    return c
+}
+// 2026-07-29 is a Wednesday.
+let wed = cal(2).date(from: DateComponents(year: 2026, month: 7, day: 29, hour: 12))!
+check("today range", "\(BoardRange.today.bounds(now: wed, calendar: cal(2)))",
+      "(from: \"2026-07-29\", to: \"2026-07-29\")")
+check("week starts Monday (FR)", BoardRange.week.bounds(now: wed, calendar: cal(2)).from, "2026-07-27")
+check("week starts Sunday (US)", BoardRange.week.bounds(now: wed, calendar: cal(1)).from, "2026-07-26")
+check("month start", BoardRange.month.bounds(now: wed, calendar: cal(2)).from, "2026-07-01")
+check("year start", BoardRange.year.bounds(now: wed, calendar: cal(2)).from, "2026-01-01")
+check("all-time start", BoardRange.all.bounds(now: wed, calendar: cal(2)).from, "2000-01-01")
+check("ranges end today, not later", BoardRange.year.bounds(now: wed, calendar: cal(2)).to, "2026-07-29")
+// Boundary: on the first day of a month, month-start equals today.
+let first = cal(2).date(from: DateComponents(year: 2026, month: 8, day: 1, hour: 9))!
+check("month start on the 1st", BoardRange.month.bounds(now: first, calendar: cal(2)).from, "2026-08-01")
+
 UserDefaults.standard.removeObject(forKey: "dailyTotals")
 print(fail == 0 ? "\nALL \(pass) CHECKS PASSED" : "\n\(fail) FAILED, \(pass) passed")
 exit(fail == 0 ? 0 : 1)

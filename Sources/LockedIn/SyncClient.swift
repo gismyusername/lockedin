@@ -120,9 +120,10 @@ struct SyncClient {
                               prefer: "resolution=merge-duplicates")
     }
 
-    func fetchBoard(groupId: UUID, dateKey: String) async throws -> [BoardRow] {
-        let data = try await request("rest/v1/rpc/get_group_board", method: "POST",
-                                     body: ["p_group": groupId.uuidString, "p_date": dateKey])
+    func fetchBoard(groupId: UUID, from: String, to: String) async throws -> [BoardRow] {
+        let data = try await request("rest/v1/rpc/get_group_board_range", method: "POST",
+                                     body: ["p_group": groupId.uuidString,
+                                            "p_from": from, "p_to": to])
         return try Self.decoder.decode([BoardRow].self, from: data)
     }
 }

@@ -5,7 +5,8 @@ keyboard, not apps open — and puts you on a live leaderboard with your friends
 
 - **`● 4:12 | 2 grinding`** in your menu bar, all day, automatically
 - **Live presence**: see which friends are locked in *right now*
-- **Daily leaderboard** with streaks
+- **Leaderboard over any range**: today, this week, month, year, or all time
+- **Month calendar** of your own history, with streaks
 - **Zero permission prompts**: no Accessibility, no Screen Recording, nothing
 - **Private by design**: only your display name, locked-in seconds, and online
   status ever leave your Mac. No app names, no window titles, no screenshots.

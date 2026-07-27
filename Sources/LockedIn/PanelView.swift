@@ -75,13 +75,27 @@ struct LeaderboardSection: View {
         let top = max(rows.first?.seconds ?? 0, 1)
         let grinding = state.grindingFriendCount + (state.isLockedIn ? 1 : 0)
         VStack(alignment: .leading, spacing: 4) {
-            HStack {
-                SectionTitle("Today")
-                Spacer()
+            HStack(spacing: 3) {
+                ForEach(BoardRange.allCases) { option in
+                    let selected = option == state.range
+                    Button { state.setRange(option) } label: {
+                        Text(option.label)
+                            .font(.system(size: 10, weight: selected ? .semibold : .regular))
+                            .foregroundStyle(selected ? Color.primary : Color.secondary)
+                            .padding(.vertical, 2).padding(.horizontal, 6)
+                            .background(RoundedRectangle(cornerRadius: 4)
+                                .fill(selected ? Color.white.opacity(0.1) : .clear))
+                    }
+                    .buttonStyle(.plain)
+                }
+                Spacer(minLength: 2)
                 if grinding > 0 {
-                    Text("\(grinding) grinding now")
-                        .font(.system(size: 10, weight: .semibold))
-                        .foregroundStyle(Color.green)
+                    HStack(spacing: 3) {
+                        Circle().fill(Color.green).frame(width: 5, height: 5)
+                        Text("\(grinding)").font(.system(size: 10, weight: .semibold))
+                            .foregroundStyle(Color.green)
+                    }
+                    .help("\(grinding) grinding right now")
                 }
             }
             ForEach(Array(rows.enumerated()), id: \.element.id) { index, row in

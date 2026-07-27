@@ -11,6 +11,7 @@ final class AppState: ObservableObject {
     @Published var groupCode: String?
     @Published var syncError: String?
     @Published var launchAtLogin: Bool = false
+    @Published var range: BoardRange = .today
 
     private var groupId: UUID?
     private(set) var userId: UUID
@@ -48,6 +49,8 @@ final class AppState: ObservableObject {
             defaults.set(userId.uuidString, forKey: "userId")
         }
         displayName = defaults.string(forKey: "displayName") ?? ""
+        if let stored = defaults.string(forKey: "boardRange"),
+           let saved = BoardRange(rawValue: stored) { range = saved }
         groupCode = defaults.string(forKey: "groupCode")
         if let stored = defaults.string(forKey: "groupId") { groupId = UUID(uuidString: stored) }
         client = Config.supabase()
@@ -117,10 +120,19 @@ final class AppState: ObservableObject {
         }
     }
 
+    func setRange(_ new: BoardRange) {
+        guard new != range else { return }
+        range = new
+        UserDefaults.standard.set(new.rawValue, forKey: "boardRange")
+        Task { await refreshBoard() }
+    }
+
     func refreshBoard() async {
         guard let client, let groupId else { return }
+        let window = range.bounds()
         do {
-            board = try await client.fetchBoard(groupId: groupId, dateKey: LocalStore.dateKey())
+            board = try await client.fetchBoard(groupId: groupId,
+                                                from: window.from, to: window.to)
             syncError = nil
         } catch {
             syncError = error.localizedDescription
