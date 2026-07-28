@@ -6,6 +6,9 @@ struct HistoryView: View {
     @Binding var showHistory: Bool
     @State private var monthAnchor = Date()
     @State private var selectedKey: String = LocalStore.dateKey()
+    @State private var mode: Mode = .calendar
+
+    enum Mode: String, CaseIterable { case calendar = "Calendar", chart = "Chart" }
 
     private let cal = Calendar.lockedIn
     private var totals: [String: Int] { LocalStore.shared.totalsByDay() }
@@ -28,8 +31,13 @@ struct HistoryView: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 10) {
             header
-            weekdayRow
-            dayGrid
+            modePicker
+            if mode == .calendar {
+                weekdayRow
+                dayGrid
+            } else {
+                dayChart
+            }
             Divider()
             selectedDetail
             monthSummary
@@ -59,6 +67,87 @@ struct HistoryView: View {
         }
         .buttonStyle(.plain)
         .disabled(!enabled)
+    }
+
+    private var modePicker: some View {
+        HStack(spacing: 3) {
+            ForEach(Mode.allCases, id: \.rawValue) { option in
+                let selected = option == mode
+                Button { mode = option } label: {
+                    Text(option.rawValue)
+                        .font(.system(size: 10, weight: selected ? .semibold : .regular))
+                        .foregroundStyle(selected ? Color.primary : Color.secondary)
+                        .padding(.vertical, 2).padding(.horizontal, 7)
+                        .background(RoundedRectangle(cornerRadius: 4)
+                            .fill(selected ? Color.white.opacity(0.1) : .clear))
+                }
+                .buttonStyle(.plain)
+            }
+            Spacer()
+            if let best = monthKeys.map({ totals[$0] ?? 0 }).max(), best > 0 {
+                Text("best \(TimeFormat.long(best))")
+                    .font(.system(size: 9)).foregroundStyle(.tertiary)
+            }
+        }
+    }
+
+    /// Daily bars for the month on screen. The calendar answers "which days",
+    /// this answers "what shape" — streaks, weekends, the drop-off after a
+    /// heavy day.
+    private var dayChart: some View {
+        let values = monthKeys.map { totals[$0] ?? 0 }
+        let peak = max(values.max() ?? 0, 1)
+        let tracked = values.filter { $0 > 0 }
+        let average = tracked.isEmpty ? 0 : tracked.reduce(0, +) / tracked.count
+        return VStack(alignment: .leading, spacing: 3) {
+            ZStack(alignment: .bottom) {
+                // Mean of the days actually worked, so idle days don't drag it.
+                if average > 0 {
+                    GeometryReader { geo in
+                        let y = geo.size.height * (1 - CGFloat(average) / CGFloat(peak))
+                        Path { p in
+                            p.move(to: CGPoint(x: 0, y: y))
+                            p.addLine(to: CGPoint(x: geo.size.width, y: y))
+                        }
+                        .stroke(style: StrokeStyle(lineWidth: 1, dash: [2, 3]))
+                        .foregroundStyle(.white.opacity(0.25))
+                    }
+                }
+                HStack(alignment: .bottom, spacing: 2) {
+                    ForEach(Array(monthKeys.enumerated()), id: \.offset) { index, key in
+                        let seconds = totals[key] ?? 0
+                        let isSelected = key == selectedKey
+                        let height = seconds > 0
+                            ? max(3, 92 * CGFloat(seconds) / CGFloat(peak)) : 2
+                        RoundedRectangle(cornerRadius: 1.5)
+                            .fill(seconds > 0
+                                  ? GreenRamp.color(GreenRamp.fraction(seconds: seconds, peak: peak))
+                                  : Color.white.opacity(0.08))
+                            .frame(height: height)
+                            .overlay(RoundedRectangle(cornerRadius: 1.5)
+                                .strokeBorder(isSelected ? Color.primary.opacity(0.8) : .clear,
+                                              lineWidth: 1))
+                            .frame(maxWidth: .infinity)
+                            .contentShape(Rectangle())
+                            .onTapGesture { selectedKey = key }
+                            .accessibilityLabel("\(index + 1): \(TimeFormat.long(seconds))")
+                    }
+                }
+            }
+            .frame(height: 94)
+            // Sparse axis: a label under every 7th day keeps it readable at 320pt.
+            HStack(spacing: 2) {
+                ForEach(Array(monthKeys.enumerated()), id: \.offset) { index, _ in
+                    Text((index + 1) % 7 == 1 ? "\(index + 1)" : " ")
+                        .font(.system(size: 7))
+                        .foregroundStyle(.tertiary)
+                        // A day column is ~7pt wide, so two digits wrap unless
+                        // the label is allowed to overflow its slot.
+                        .fixedSize(horizontal: true, vertical: false)
+                        .frame(maxWidth: .infinity)
+                }
+            }
+        }
     }
 
     private var weekdayRow: some View {
@@ -91,13 +180,14 @@ struct HistoryView: View {
         let seconds = totals[key] ?? 0
         let isToday = key == LocalStore.dateKey()
         let isSelected = key == selectedKey
-        // Floor the fill so a tracked day is never invisible.
-        let intensity = seconds > 0 ? 0.18 + 0.62 * min(1, Double(seconds) / Double(peakSeconds)) : 0
+        let fill: Color = seconds > 0
+            ? GreenRamp.color(GreenRamp.fraction(seconds: seconds, peak: peakSeconds))
+            : .clear
         return Text("\(day)")
             .font(.system(size: 11, weight: isToday ? .bold : .regular))
             .frame(maxWidth: .infinity)
             .frame(height: 30)
-            .background(RoundedRectangle(cornerRadius: 5).fill(Color.green.opacity(intensity)))
+            .background(RoundedRectangle(cornerRadius: 5).fill(fill))
             .overlay(RoundedRectangle(cornerRadius: 5)
                 .strokeBorder(isSelected ? Color.primary.opacity(0.7)
                               : (isToday ? Color.secondary.opacity(0.6) : .clear),
@@ -111,9 +201,13 @@ struct HistoryView: View {
         return HStack(alignment: .firstTextBaseline) {
             Text(longDate(selectedKey)).font(.caption).foregroundStyle(.secondary)
             Spacer()
-            Text(seconds > 0 ? TimeFormat.long(seconds) : "nothing logged")
-                .font(.system(size: 15, weight: .semibold, design: .monospaced))
-                .foregroundStyle(seconds > 0 ? .primary : .secondary)
+            // Monospaced digits are for times; the placeholder shouldn't shout.
+            if seconds > 0 {
+                Text(TimeFormat.long(seconds))
+                    .font(.system(size: 15, weight: .semibold, design: .monospaced))
+            } else {
+                Text("nothing logged").font(.caption).foregroundStyle(.tertiary)
+            }
         }
     }
 

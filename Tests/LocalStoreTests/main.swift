@@ -152,6 +152,22 @@ check("takes the larger server value", "\(store.todaySeconds(key: "2026-07-21"))
 check("restores a day absent locally", "\(store.todaySeconds(key: "2026-07-19"))", "7200")
 check("merging twice changes nothing", "\(store.mergeHistory(["2026-07-19": 7200]))", "0")
 
+
+// ---- green ramp ----
+func ch(_ f: Double) -> Double { GreenRamp.rgb(f).g }
+check("ramp bottom is the muted stop", String(format: "%.2f", GreenRamp.rgb(0).g), "0.26")
+check("ramp top is the bright stop", String(format: "%.2f", GreenRamp.rgb(1).g), "0.97")
+check("ramp clamps below zero", "\(GreenRamp.rgb(-5).g == GreenRamp.rgb(0).g)", "true")
+check("ramp clamps above one", "\(GreenRamp.rgb(9).g == GreenRamp.rgb(1).g)", "true")
+check("ramp rises monotonically",
+      "\((stride(from: 0.0, through: 1.0, by: 0.05).map(ch)).enumerated().allSatisfy { i, v in i == 0 || v >= ch(Double(i - 1) * 0.05) })",
+      "true")
+check("more time is never darker", "\(ch(0.9) > ch(0.1))", "true")
+// A tracked-but-tiny day must still be visibly above the empty-day floor.
+check("small day clears the floor", "\(GreenRamp.fraction(seconds: 60, peak: 36000) >= 0.12)", "true")
+check("empty day is zero", "\(GreenRamp.fraction(seconds: 0, peak: 36000))", "0.0")
+check("best day is full strength", "\(GreenRamp.fraction(seconds: 100, peak: 100))", "1.0")
+
 UserDefaults.standard.removeObject(forKey: "dailyTotals")
 print(fail == 0 ? "\nALL \(pass) CHECKS PASSED" : "\n\(fail) FAILED, \(pass) passed")
 exit(fail == 0 ? 0 : 1)

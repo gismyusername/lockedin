@@ -119,9 +119,10 @@ struct LeaderboardSection: View {
                     }
                     GeometryReader { geo in
                         Capsule()
-                            .fill(live ? Color.green.opacity(0.75) : Color.secondary.opacity(0.3))
+                            .fill(GreenRamp.color(GreenRamp.fraction(seconds: row.seconds, peak: top)))
                             .frame(width: max(geo.size.width * CGFloat(row.seconds) / CGFloat(top), 4),
                                    height: 6)
+                            .shadow(color: live ? Color.green.opacity(0.5) : .clear, radius: 3)
                             .frame(maxHeight: .infinity, alignment: .center)
                     }
                     Text(TimeFormat.long(row.seconds))
