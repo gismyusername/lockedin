@@ -44,6 +44,22 @@ struct LocalStore {
         return newValue
     }
 
+    /// Folds server-side history into the local store. Takes the larger value
+    /// per day: today's local count is usually ahead of the last heartbeat, and
+    /// a wiped-or-new Mac has nothing, so max() restores without ever rolling
+    /// a day backwards. Returns how many days changed.
+    @discardableResult
+    func mergeHistory(_ remote: [String: Int]) -> Int {
+        var t = totals()
+        var changed = 0
+        for (day, seconds) in remote where seconds > (t[day] ?? 0) {
+            t[day] = seconds
+            changed += 1
+        }
+        if changed > 0 { defaults.set(t, forKey: totalsKey) }
+        return changed
+    }
+
     /// Consecutive local days (ending today or yesterday) with >= 30 min locked in.
     /// Today counts toward the streak once it crosses the floor, but an
     /// unfinished today doesn't break yesterday's run.

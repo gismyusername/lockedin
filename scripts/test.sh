@@ -5,6 +5,6 @@
 set -euo pipefail
 cd "$(dirname "$0")/.."
 OUT=$(mktemp -d)
-swiftc -O Sources/LockedIn/LocalStore.swift Sources/LockedIn/MonthGrid.swift Sources/LockedIn/BoardRange.swift Sources/LockedIn/InstallToApplications.swift Tests/LocalStoreTests/main.swift -o "$OUT/storetest"
+swiftc -O Sources/LockedIn/LocalStore.swift Sources/LockedIn/MonthGrid.swift Sources/LockedIn/BoardRange.swift Sources/LockedIn/InstallToApplications.swift Sources/LockedIn/Updater.swift Tests/LocalStoreTests/main.swift -o "$OUT/storetest"
 "$OUT/storetest"
 rm -rf "$OUT" "$HOME/Library/Preferences/storetest.plist"

@@ -120,6 +120,16 @@ struct SyncClient {
                               prefer: "resolution=merge-duplicates")
     }
 
+    /// This user's whole recorded history, for restoring onto a new Mac.
+    func fetchHistory(userId: UUID) async throws -> [String: Int] {
+        struct Row: Codable { let date: String; let seconds: Int }
+        let data = try await request("rest/v1/daily_scores", method: "GET",
+                                     query: [.init(name: "user_id", value: "eq.\(userId.uuidString.lowercased())"),
+                                             .init(name: "select", value: "date,seconds")])
+        let rows = try JSONDecoder().decode([Row].self, from: data)
+        return Dictionary(rows.map { ($0.date, $0.seconds) }, uniquingKeysWith: max)
+    }
+
     func fetchBoard(groupId: UUID, from: String, to: String) async throws -> [BoardRow] {
         let data = try await request("rest/v1/rpc/get_group_board_range", method: "POST",
                                      body: ["p_group": groupId.uuidString,

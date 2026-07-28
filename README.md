@@ -7,6 +7,8 @@ keyboard, not apps open — and puts you on a live leaderboard with your friends
 - **Live presence**: see which friends are locked in *right now*
 - **Leaderboard over any range**: today, this week, month, year, or all time
 - **Month calendar** of your own history, with streaks
+- **History follows you**: a new Mac pulls your recorded days back from the server
+- **Updates itself**: checks GitHub Releases daily and offers to install
 - **Zero permission prompts**: no Accessibility, no Screen Recording, nothing
 - **Private by design**: only your display name, locked-in seconds, and online
   status ever leave your Mac. No app names, no window titles, no screenshots.

@@ -128,6 +128,30 @@ do {
 }
 try? FileManager.default.removeItem(at: tmp)
 
+
+// ---- version comparison ----
+func newer(_ a: String, _ b: String) -> String { Updater.isNewer(a, than: b) ? "yes" : "no" }
+check("patch bump", newer("0.1.12", "0.1.11"), "yes")
+check("double-digit patch beats single", newer("0.1.12", "0.1.9"), "yes")
+check("minor bump", newer("0.2.0", "0.1.99"), "yes")
+check("v prefix tolerated", newer("v0.1.12", "0.1.11"), "yes")
+check("same version is not newer", newer("0.1.11", "0.1.11"), "no")
+check("older is not newer", newer("0.1.10", "0.1.11"), "no")
+check("shorter equal prefix", newer("0.2", "0.2.0"), "no")
+check("malformed tag never nags", newer("nightly", "0.1.11"), "no")
+
+// ---- history merge ----
+UserDefaults.standard.removeObject(forKey: "dailyTotals")
+let store = LocalStore.shared
+_ = store.addToToday(seconds: 900, key: "2026-07-20")   // local ahead of server
+_ = store.addToToday(seconds: 100, key: "2026-07-21")   // local behind server
+let merged = store.mergeHistory(["2026-07-20": 500, "2026-07-21": 4000, "2026-07-19": 7200])
+check("merged day count", "\(merged)", "2")
+check("keeps the larger local value", "\(store.todaySeconds(key: "2026-07-20"))", "900")
+check("takes the larger server value", "\(store.todaySeconds(key: "2026-07-21"))", "4000")
+check("restores a day absent locally", "\(store.todaySeconds(key: "2026-07-19"))", "7200")
+check("merging twice changes nothing", "\(store.mergeHistory(["2026-07-19": 7200]))", "0")
+
 UserDefaults.standard.removeObject(forKey: "dailyTotals")
 print(fail == 0 ? "\nALL \(pass) CHECKS PASSED" : "\n\(fail) FAILED, \(pass) passed")
 exit(fail == 0 ? 0 : 1)

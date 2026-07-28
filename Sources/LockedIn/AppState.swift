@@ -20,6 +20,7 @@ final class AppState: ObservableObject {
     private var tick = 0
     private var timer: Timer?
     private var userRegistered = false
+    private var historyRestored = false
     private var lastAutoJoin: Date?
 
     /// Idle threshold: last input under 60s ago counts as locked in.
@@ -106,10 +107,28 @@ final class AppState: ObservableObject {
         }
     }
 
+    /// Local history lives in UserDefaults, so a new Mac (or wiped prefs)
+    /// starts blank even though every day is sitting on the server. Pull it
+    /// back once per launch.
+    private func restoreHistoryOnce() async {
+        guard let client, !historyRestored else { return }
+        historyRestored = true
+        do {
+            let remote = try await client.fetchHistory(userId: userId)
+            let restored = LocalStore.shared.mergeHistory(remote)
+            if restored > 0 { todaySeconds = LocalStore.shared.todaySeconds() }
+            syncError = nil
+        } catch {
+            historyRestored = false   // let the next heartbeat retry
+            syncError = error.localizedDescription
+        }
+    }
+
     private func sendHeartbeat() async {
         guard let client, !displayName.isEmpty else { return }
         await ensureUserRegistered()
         await autoJoinIfNeeded()
+        await restoreHistoryOnce()
         do {
             try await client.heartbeat(userId: userId, dateKey: LocalStore.dateKey(),
                                        seconds: todaySeconds, isActive: isLockedIn,
@@ -152,6 +171,7 @@ final class AppState: ObservableObject {
             userRegistered = true
             syncError = nil
             await autoJoinIfNeeded()
+            await restoreHistoryOnce()
         } catch {
             syncError = error.localizedDescription
         }
