@@ -1,3 +1,7 @@
+-- SUPERSEDED: the intraday feature was removed in v0.1.16 as scope creep.
+-- The column is left in place (nullable, unwritten) rather than dropped,
+-- since dropping it would destroy data for no benefit.
+
 -- Per-hour breakdown of each day, so "when did I work" survives a new Mac the
 -- same way the daily total already does.
 --
