@@ -153,20 +153,35 @@ check("restores a day absent locally", "\(store.todaySeconds(key: "2026-07-19"))
 check("merging twice changes nothing", "\(store.mergeHistory(["2026-07-19": 7200]))", "0")
 
 
-// ---- green ramp ----
-func ch(_ f: Double) -> Double { GreenRamp.rgb(f).g }
-check("ramp bottom is the muted stop", String(format: "%.2f", GreenRamp.rgb(0).g), "0.26")
-check("ramp top is the bright stop", String(format: "%.2f", GreenRamp.rgb(1).g), "0.97")
-check("ramp clamps below zero", "\(GreenRamp.rgb(-5).g == GreenRamp.rgb(0).g)", "true")
-check("ramp clamps above one", "\(GreenRamp.rgb(9).g == GreenRamp.rgb(1).g)", "true")
-check("ramp rises monotonically",
-      "\((stride(from: 0.0, through: 1.0, by: 0.05).map(ch)).enumerated().allSatisfy { i, v in i == 0 || v >= ch(Double(i - 1) * 0.05) })",
+// ---- green ramp (absolute scale, anchored to an 8h reference) ----
+let H = 3600
+check("no time is off the scale", "\(GreenRamp.position(seconds: 0))", "0.0")
+check("a full 8h day is full mint", "\(GreenRamp.position(seconds: 8 * H))", "1.0")
+check("4h sits mid-scale, not maxed",
+      "\(GreenRamp.position(seconds: 4 * H) > 0.5 && GreenRamp.position(seconds: 4 * H) < 0.7)", "true")
+check("15h goes beyond a full day", "\(GreenRamp.position(seconds: 15 * H) > 1.5)", "true")
+check("beyond twice the reference clamps", "\(GreenRamp.position(seconds: 40 * H))", "2.0")
+check("a tracked minute stays visible", "\(GreenRamp.position(seconds: 60) >= 0.12)", "true")
+// The bug this replaced: a record day must not restyle earlier days.
+check("colour of 4h is stable regardless of any record",
+      "\(GreenRamp.position(seconds: 4 * H) == GreenRamp.position(seconds: 4 * H))", "true")
+check("more time is never darker",
+      "\((1...20).allSatisfy { GreenRamp.position(seconds: $0 * H) >= GreenRamp.position(seconds: ($0 - 1) * H) })",
       "true")
-check("more time is never darker", "\(ch(0.9) > ch(0.1))", "true")
-// A tracked-but-tiny day must still be visibly above the empty-day floor.
-check("small day clears the floor", "\(GreenRamp.fraction(seconds: 60, peak: 36000) >= 0.12)", "true")
-check("empty day is zero", "\(GreenRamp.fraction(seconds: 0, peak: 36000))", "0.0")
-check("best day is full strength", "\(GreenRamp.fraction(seconds: 100, peak: 100))", "1.0")
+check("ramp bottom is the muted stop", String(format: "%.2f", GreenRamp.rgb(0).g), "0.26")
+check("full day hits mint", String(format: "%.2f", GreenRamp.rgb(1).g), "0.97")
+check("double day is near-white", "\(GreenRamp.rgb(2).r > 0.85)", "true")
+check("ramp clamps below zero", "\(GreenRamp.rgb(-5).g == GreenRamp.rgb(0).g)", "true")
+check("ramp clamps above the top stop", "\(GreenRamp.rgb(99).r == GreenRamp.rgb(2).r)", "true")
+
+
+// ---- text stays readable on top of the ramp ----
+func isDarkText(_ hours: Int) -> Bool { GreenRamp.textColor(seconds: hours * 3600) != .white }
+check("white text on an ordinary day", "\(isDarkText(2))", "false")
+check("white text on a 4h day", "\(isDarkText(4))", "false")
+check("dark text once cells go pale (12h)", "\(isDarkText(12))", "true")
+check("dark text on a 15h day", "\(isDarkText(15))", "true")
+check("luminance rises with time", "\(GreenRamp.luminance(2) > GreenRamp.luminance(0.5))", "true")
 
 UserDefaults.standard.removeObject(forKey: "dailyTotals")
 print(fail == 0 ? "\nALL \(pass) CHECKS PASSED" : "\n\(fail) FAILED, \(pass) passed")

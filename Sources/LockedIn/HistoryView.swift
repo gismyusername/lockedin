@@ -15,10 +15,6 @@ struct HistoryView: View {
 
     private var grid: MonthGrid { MonthGrid.make(anchor: monthAnchor, calendar: cal) }
 
-    /// Scale shading against the best day on record so a heavy month doesn't
-    /// wash out and a light one still shows contrast.
-    private var peakSeconds: Int { max(totals.values.max() ?? 0, 30 * 60) }
-
     private var monthKeys: [String] {
         (1...grid.dayCount).compactMap { day in
             grid.date(day: day, calendar: cal).map { LocalStore.dateKey($0) }
@@ -120,9 +116,8 @@ struct HistoryView: View {
                         let height = seconds > 0
                             ? max(3, 92 * CGFloat(seconds) / CGFloat(peak)) : 2
                         RoundedRectangle(cornerRadius: 1.5)
-                            .fill(seconds > 0
-                                  ? GreenRamp.color(GreenRamp.fraction(seconds: seconds, peak: peak))
-                                  : Color.white.opacity(0.08))
+                            .fill(seconds > 0 ? GreenRamp.color(seconds: seconds)
+                                              : Color.white.opacity(0.08))
                             .frame(height: height)
                             .overlay(RoundedRectangle(cornerRadius: 1.5)
                                 .strokeBorder(isSelected ? Color.primary.opacity(0.8) : .clear,
@@ -180,11 +175,10 @@ struct HistoryView: View {
         let seconds = totals[key] ?? 0
         let isToday = key == LocalStore.dateKey()
         let isSelected = key == selectedKey
-        let fill: Color = seconds > 0
-            ? GreenRamp.color(GreenRamp.fraction(seconds: seconds, peak: peakSeconds))
-            : .clear
+        let fill: Color = seconds > 0 ? GreenRamp.color(seconds: seconds) : .clear
         return Text("\(day)")
             .font(.system(size: 11, weight: isToday ? .bold : .regular))
+            .foregroundStyle(seconds > 0 ? GreenRamp.textColor(seconds: seconds) : Color.primary)
             .frame(maxWidth: .infinity)
             .frame(height: 30)
             .background(RoundedRectangle(cornerRadius: 5).fill(fill))
