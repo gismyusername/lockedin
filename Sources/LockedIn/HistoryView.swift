@@ -36,6 +36,7 @@ struct HistoryView: View {
             }
             Divider()
             selectedDetail
+            dayTimeline
             monthSummary
         }
     }
@@ -202,6 +203,43 @@ struct HistoryView: View {
             } else {
                 Text("nothing logged").font(.caption).foregroundStyle(.tertiary)
             }
+        }
+    }
+
+    /// When during the selected day the work actually happened. Twenty-four
+    /// buckets; a bar reaching full height means that whole hour was worked.
+    /// A day total tells you how much, this tells you the shape of it —
+    /// mornings, a post-dinner second wind, a fragmented afternoon.
+    @ViewBuilder
+    private var dayTimeline: some View {
+        let hours = LocalStore.shared.hourly(for: selectedKey)
+        if hours.contains(where: { $0 > 0 }) {
+            VStack(alignment: .leading, spacing: 2) {
+                HStack(alignment: .bottom, spacing: 1.5) {
+                    ForEach(0..<24, id: \.self) { hour in
+                        let seconds = hours[hour]
+                        let filled = min(1, Double(seconds) / 3600)
+                        RoundedRectangle(cornerRadius: 1)
+                            // A fully worked hour reaches mint, the same way a
+                            // full day does on the calendar.
+                            .fill(seconds > 0 ? GreenRamp.color(filled) : Color.white.opacity(0.06))
+                            .frame(height: seconds > 0 ? max(3, 26 * filled) : 2)
+                            .frame(maxWidth: .infinity)
+                            .help("\(hour):00 — \(TimeFormat.long(seconds))")
+                    }
+                }
+                .frame(height: 26, alignment: .bottom)
+                HStack(spacing: 1.5) {
+                    ForEach(0..<24, id: \.self) { hour in
+                        Text(hour % 6 == 0 ? "\(hour)" : " ")
+                            .font(.system(size: 7))
+                            .foregroundStyle(.tertiary)
+                            .fixedSize(horizontal: true, vertical: false)
+                            .frame(maxWidth: .infinity)
+                    }
+                }
+            }
+            .padding(.top, 2)
         }
     }
 

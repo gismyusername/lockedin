@@ -103,7 +103,7 @@ struct SyncClient {
     }
 
     func heartbeat(userId: UUID, dateKey: String, seconds: Int, isActive: Bool,
-                   lastActiveAt: Date?) async throws {
+                   lastActiveAt: Date?, hours: [Int]? = nil) async throws {
         var body: [String: Any] = [
             "user_id": userId.uuidString,
             "date": dateKey,
@@ -114,20 +114,25 @@ struct SyncClient {
         if let lastActiveAt {
             body["last_active_at"] = Self.iso.string(from: lastActiveAt)
         }
+        if let hours, hours.count == 24 { body["hours"] = hours }
         _ = try await request("rest/v1/daily_scores", method: "POST",
                               query: [.init(name: "on_conflict", value: "user_id,date")],
                               body: body,
                               prefer: "resolution=merge-duplicates")
     }
 
-    /// This user's whole recorded history, for restoring onto a new Mac.
-    func fetchHistory(userId: UUID) async throws -> [String: Int] {
-        struct Row: Codable { let date: String; let seconds: Int }
+    /// This user's whole recorded history, for restoring onto a new Mac:
+    /// daily totals plus the per-hour breakdown where one was stored.
+    func fetchHistory(userId: UUID) async throws -> (days: [String: Int], hours: [String: [Int]]) {
+        struct Row: Codable { let date: String; let seconds: Int; let hours: [Int]? }
         let data = try await request("rest/v1/daily_scores", method: "GET",
                                      query: [.init(name: "user_id", value: "eq.\(userId.uuidString.lowercased())"),
-                                             .init(name: "select", value: "date,seconds")])
+                                             .init(name: "select", value: "date,seconds,hours")])
         let rows = try JSONDecoder().decode([Row].self, from: data)
-        return Dictionary(rows.map { ($0.date, $0.seconds) }, uniquingKeysWith: max)
+        let days = Dictionary(rows.map { ($0.date, $0.seconds) }, uniquingKeysWith: max)
+        var hours: [String: [Int]] = [:]
+        for row in rows where row.hours?.count == 24 { hours[row.date] = row.hours }
+        return (days, hours)
     }
 
     func fetchBoard(groupId: UUID, from: String, to: String) async throws -> [BoardRow] {

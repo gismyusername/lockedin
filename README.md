@@ -7,6 +7,7 @@ keyboard, not apps open — and puts you on a live leaderboard with your friends
 - **Live presence**: see which friends are locked in *right now*
 - **Leaderboard over any range**: today, this week, month, year, or all time
 - **Month calendar and bar chart** of your own history, with streaks
+- **Intraday timeline**: tap any day to see which hours you actually worked
 - **Colour carries time**: one green scale, deep for a light day, bright for your best
 - **History follows you**: a new Mac pulls your recorded days back from the server
 - **Updates itself**: checks GitHub Releases daily and offers to install

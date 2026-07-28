@@ -183,6 +183,31 @@ check("dark text once cells go pale (12h)", "\(isDarkText(12))", "true")
 check("dark text on a 15h day", "\(isDarkText(15))", "true")
 check("luminance rises with time", "\(GreenRamp.luminance(2) > GreenRamp.luminance(0.5))", "true")
 
+
+// ---- intraday buckets ----
+UserDefaults.standard.removeObject(forKey: "hourlyTotals")
+let day = "2026-07-28"
+_ = store.addToHour(seconds: 300, key: day, hour: 9)
+_ = store.addToHour(seconds: 600, key: day, hour: 9)
+_ = store.addToHour(seconds: 1800, key: day, hour: 22)
+let h = store.hourly(for: day)
+check("hour buckets accumulate", "\(h[9])", "900")
+check("a separate hour is separate", "\(h[22])", "1800")
+check("untouched hours stay zero", "\(h[0] + h[13])", "0")
+check("always 24 buckets", "\(h.count)", "24")
+check("unknown day is all zeros", "\(store.hourly(for: "1999-01-01").reduce(0, +))", "0")
+// An hour cannot contain more than an hour, whatever the clock does.
+_ = store.addToHour(seconds: 9999, key: day, hour: 9)
+check("an hour is capped at 3600s", "\(store.hourly(for: day)[9])", "3600")
+// Out-of-range hours must not corrupt the day.
+_ = store.addToHour(seconds: 500, key: day, hour: 42)
+check("bogus hour index is ignored", "\(store.hourly(for: day).reduce(0, +))", "5400")
+var incoming = Array(repeating: 0, count: 24); incoming[7] = 1200; incoming[9] = 100
+check("merge adds a new hour", "\(store.mergeHourly([day: incoming]))", "1")
+check("merge keeps the larger local hour", "\(store.hourly(for: day)[9])", "3600")
+check("merge restores a missing hour", "\(store.hourly(for: day)[7])", "1200")
+UserDefaults.standard.removeObject(forKey: "hourlyTotals")
+
 UserDefaults.standard.removeObject(forKey: "dailyTotals")
 print(fail == 0 ? "\nALL \(pass) CHECKS PASSED" : "\n\(fail) FAILED, \(pass) passed")
 exit(fail == 0 ? 0 : 1)

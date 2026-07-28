@@ -77,6 +77,7 @@ final class AppState: ObservableObject {
         isLockedIn = idle < idleThreshold
         if isLockedIn {
             todaySeconds = LocalStore.shared.addToToday(seconds: tickSeconds)
+            LocalStore.shared.addToHour(seconds: tickSeconds)
             lastActiveAt = Date()
         } else {
             // Day may have rolled over at midnight while idle.
@@ -115,7 +116,8 @@ final class AppState: ObservableObject {
         historyRestored = true
         do {
             let remote = try await client.fetchHistory(userId: userId)
-            let restored = LocalStore.shared.mergeHistory(remote)
+            let restored = LocalStore.shared.mergeHistory(remote.days)
+            _ = LocalStore.shared.mergeHourly(remote.hours)
             if restored > 0 { todaySeconds = LocalStore.shared.todaySeconds() }
             syncError = nil
         } catch {
@@ -132,7 +134,8 @@ final class AppState: ObservableObject {
         do {
             try await client.heartbeat(userId: userId, dateKey: LocalStore.dateKey(),
                                        seconds: todaySeconds, isActive: isLockedIn,
-                                       lastActiveAt: lastActiveAt)
+                                       lastActiveAt: lastActiveAt,
+                                       hours: LocalStore.shared.hourly())
             syncError = nil
         } catch {
             syncError = error.localizedDescription
